@@ -1,7 +1,4 @@
-﻿#NoEnv
-#SingleInstance Force
-
-; --- REGISTRY PATHS (HKCU) ---
+﻿; --- REGISTRY PATHS (HKCU) ---
 ; :contentReference[oaicite:1]{index=1}
 stateSubKey    := "Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\default$windows.data.bluelightreduction.bluelightreductionstate\windows.data.bluelightreduction.bluelightreductionstate"
 settingsSubKey := "Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\default$windows.data.bluelightreduction.settings\windows.data.bluelightreduction.settings"
@@ -20,25 +17,25 @@ F9::
     NightLight_Toggle()
 return
 
-; F10 -> Forzar ON
+; F10 -> Force ON
 F10::
     NightLight_Enable()
 return
 
-; F11 -> Forzar OFF
+; F11 -> Force OFF
 F11::
     NightLight_Disable()
 return
 
-; F12 -> Mostrar fuerza actual (0–100%)
+; F12 -> Show current strength (0–100%)
 F12::
     strength := NightLight_GetStrength()
-    MsgBox, 64, Night Light, Intensidad actual: %strength%`%
+    MsgBox, 64, Night Light, Current intensity: %strength%`%
 return
 */
 
 ; ============================
-;   API PRINCIPAL
+;   MAIN API
 ; ============================
 
 NightLight_Supported() {
@@ -183,11 +180,15 @@ NightLight_GetStrength() {
         return 0
 
     bytes := NightLight_HexToBytes(dataHex)
-    if (!IsObject(bytes) || !bytes.HasKey(0x23) || !bytes.HasKey(0x24))
+    if (!IsObject(bytes))
         return 0
 
-    tempLo := bytes[0x23]
-    tempHi := bytes[0x24]
+    idx := NightLight_FindTempIndex(bytes)
+    if (idx < 0)
+        return 0
+
+    tempLo := bytes[idx]
+    tempHi := bytes[idx + 1]
 
     kelvin := tempHi * 64 + ((tempLo - 128) / 2.0)
     perc := NightLight_ConvertFromKelvin(kelvin)
@@ -202,6 +203,8 @@ NightLight_GetStrength() {
 
 NightLight_SetStrength(percentage) {
     global settingsSubKey, MIN_KELVIN, MAX_KELVIN
+    if (percentage == "null")
+        return
 
     if (percentage < 0)
         percentage := 0
@@ -219,15 +222,19 @@ NightLight_SetStrength(percentage) {
     if (!IsObject(bytes))
         return 0
 
+    idx := NightLight_FindTempIndex(bytes)
+    if (idx < 0)
+        return 0
+
     kelvin := NightLight_ConvertToKelvin(percentage)
 
     tempHi := Floor(kelvin / 64)
     tempLo := ((kelvin - (tempHi * 64)) * 2) + 128
 
-    bytes[0x23] := Floor(tempLo) & 0xFF
-    bytes[0x24] := Floor(tempHi) & 0xFF
+    bytes[idx]     := Floor(tempLo) & 0xFF
+    bytes[idx + 1] := Floor(tempHi) & 0xFF
 
-    ; Update timestamp bytes 10-14
+    ; Bump the timestamp bytes 10-14 so Windows actually notices the change
     Loop, 5 {
         i := 10 + (A_Index - 1)
         if (bytes.HasKey(i) && bytes[i] != 0xFF) {
@@ -240,16 +247,32 @@ NightLight_SetStrength(percentage) {
     RegWrite, REG_BINARY, HKCU, %settingsSubKey%, Data, %hexNew%
 
     if (ErrorLevel) {
-        MsgBox, 16, Night Light, Error al escribir en el registro (intensidad).
+        MsgBox, 16, Night Light, Error writing to the registry (intensity).
         return 0
     }
     return 1
 }
 
+NightLight_SetStrengthProgressive(target, currentStrength := "null", instant := 0) {
+    if (target == "null")
+        return
+    currentStrength := currentStrength != "null" ? currentStrength : NightLight_GetStrength() ; Allows passing a 0 value for when it was not active to be smooth
 
-; ============================
-;   AUX FUNCTIONS
-; ============================
+	if (currentStrength == target)
+        return
+	
+	steps := 15
+    Loop, %steps% {
+        val := Round(currentStrength + (target - currentStrength) * (A_Index / steps))
+        if (val < 0)
+            val := 0
+        else if (val > 100)
+            val := 100
+        NightLight_SetStrength(val)
+        if (!instant)
+            Sleep, 30 ; This is fast, need to have a little delay unlike VCP messages
+    }
+}
 
 NightLight_ConvertFromKelvin(kelvin) {
     global MIN_KELVIN, MAX_KELVIN
@@ -293,4 +316,29 @@ NightLight_BytesToHex(arr) {
     for idx, b in arr
         hex .= Format("{:02X}", b & 0xFF)
     return hex
+}
+
+
+NightLight_FindTempIndex(bytes) {
+    ; Returns the index of the first temperature byte (tempLo) or -1 on failure.
+    len := bytes.Count()
+    if (len < 7)
+        return -1
+
+    ; Look for the sequence: CF 28 [tempLo] [tempHi] CA 32
+    Loop, % (len - 6) {
+        k := A_Index - 1  ; array is 0-based in this script
+        if (bytes[k] = 0xCF
+        &&  bytes[k + 1] = 0x28
+        &&  bytes[k + 4] = 0xCA
+        &&  bytes[k + 5] = 0x32) {
+            return k + 2  ; first temperature byte
+        }
+    }
+
+    ; Fallback for *really* old layouts that used 0x23 / 0x24
+    if (bytes.HasKey(0x23) && bytes.HasKey(0x24))
+        return 0x23
+
+    return -1
 }

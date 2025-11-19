@@ -1,5 +1,4 @@
-﻿getMonitorHandle()
-{
+﻿getMonitorHandle() {
   ; Initialize Monitor handle
   hMon := DllCall("MonitorFromPoint"
 	, "int64", 0 ; point on monitor
@@ -17,29 +16,28 @@
   return hPhysMon := NumGet(Physical_Monitor)
 }
 
-destroyMonitorHandle(handle)
-{
+destroyMonitorHandle(handle) {
   DllCall("dxva2\DestroyPhysicalMonitor", "int", handle)
 }
 
-setMonitorBrightnessProgressive(source)
-{
-	target := source
-	if (source) {
-		Loop, 15
-		{
-			setMonitorBrightness(A_Index * 6)
-		}
-	} else {
-		Loop, 15
-		{
-			setMonitorBrightness(100 - A_Index * 6)
-		}
-	}
+setMonitorBrightnessProgressive(target) {
+    currentBrightness := getMonitorBrightness()
+
+	if (currentBrightness == target)
+        return
+	
+	steps := 15
+    Loop, %steps% {
+        val := Round(currentBrightness + (target - currentBrightness) * (A_Index / steps))
+        if (val < 0)
+            val := 0
+        else if (val > 100)
+            val := 100
+        setMonitorBrightness(val)
+    }
 }
 
-setMonitorBrightness(source)
-{
+setMonitorBrightness(source) {
   handle := getMonitorHandle()
   DllCall("dxva2\SetVCPFeature"
 	, "int", handle
@@ -48,8 +46,7 @@ setMonitorBrightness(source)
   destroyMonitorHandle(handle)
 }
 
-getMonitorBrightness()
-{
+getMonitorBrightness() {
   handle := getMonitorHandle()
   DllCall("dxva2\GetVCPFeatureAndVCPFeatureReply"
 	, "int", handle

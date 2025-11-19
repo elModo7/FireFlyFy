@@ -1,93 +1,99 @@
 ﻿;@Ahk2Exe-SetName FireFlyFy
 ;@Ahk2Exe-SetDescription Changes monitor brightness based on active window.
-;@Ahk2Exe-SetVersion 0.0.1
+;@Ahk2Exe-SetVersion 1.0.0
 ;@Ahk2Exe-SetCopyright Copyright (c) 2025`, elModo7 - VictorDevLog
 ;@Ahk2Exe-SetOrigFilename FireFlyFy.exe
 #NoEnv
 #SingleInstance Force
 #Persistent
+SetTitleMatchMode, 3
 DetectHiddenWindows, On
 SetBatchLines -1
+CoordMode, Mouse, Screen
+global version := "0.1.3"
+global appName := "FireFlyFy"
+
+; Libs
 #Include <Screen>
 #Include <cJSON>
-#Include <aboutScreen>
+#Include <Utils>
+#Include <AboutScreen>
 #Include <WindowsNightLight>
-global version := "0.1"
-global appName := "FireFlyFy"
-global appPrev, globalSettings, apps
 
-gosub, configureTray
-gosub, createOrReadConfig
+; Globals
+global initialBrightness, appPrev, processPrev, globalConfig, appsConfig, isVisible := 1, fireFlyFyEnabled := 1
+
+; Init
+createOrReadConfig()
+loadTranslations(globalConfig.language)
+installResources()
+setInitialBrigthness()
+configureTray()
 createNightFilter()
 
-SetTimer, checkCurrentApp, 500
-;WinShow, nightFilter
-NightLight_Toggle()
-Sleep, 2000
-NightLight_Toggle()
+Gui +LastFound 
+hWnd := WinExist()
+DllCall("RegisterShellHookWindow", UInt, hWnd)
+registerWindowMessageId := DllCall("RegisterWindowMessage", Str, "SHELLHOOK")
+OnMessage(0x404, "trayEventsCapture")
+
+enableFireFlyFy()
+gosub, initMouseFollower
 return
+
+detectWindowChanged(wParam, lParam)
+{
+	; https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms644991(v=vs.85)
+	if ((wParam > 0 && wParam < 5) || wParam == 6 || wParam == 32772) {
+		Settimer, checkCurrentApp, 100
+	}
+}
 
 checkCurrentApp:
-	;WinGetActiveTitle, activeTitle
-	;WinGet, activeProcess, ProcessName
-	if (appCur != appPrev) {
-		; setMonitorBrightnessProgressive(0)
-	}
-	appPrev := appCur
-return
-
-configureTray:
-	Menu, Tray, NoStandard
-	Menu, Tray, Tip, % appName "v" version
-	Menu, Tray, Add,
-	Menu, tray, add, % appName " Info", showAboutScreen
-	;Menu tray, Icon, % appName " Info", % A_Temp "\" appName "\info.ico"
-	Menu, Tray, Add, Exit, ExitSub
-	;Menu tray, Icon, Exit, % A_Temp "\" appName "\close3.ico"
-return
-
-createOrReadConfig:
-	if (!FileExist("config/global.json")) {
-		createConfig()
-	} else {
-		FileRead, globalSettings, config/global.json
-		globalSettings := JSON.Load(globalSettings)
+	Settimer, checkCurrentApp, Off
+	WinGetActiveTitle, appCur
+	WinGet, processCur, ProcessName, A
+	if (appCur != appPrev || processCur != processPrev) {
+		appPrev := appCur
+		processPrev := processCur
+		for appK, appV in appsConfig.apps
+		{
+			if (appV.activeBy == "process") {
+				if (processCur == appV.process) {
+					applyFireFlyFy(appV)
+					return
+				}
+			} else {
+				if (appCur == appV.title) {
+					applyFireFlyFy(appV)
+					return
+				}
+			}
+		}
+		removeFireFlyFy()
 	}
 return
 
-createConfig() {
-	globalSettings := {}
-	globalSettings.language := "en-US"
-	globalSettings.startWithWindows := 0
-	FileAppend, % JSON.Dump(globalSettings), config/global.json
-}
+#Include <LabelUtils>
 
-createNightFilter() {
-	global
-	Gui, nightFilter:+AlwaysOnTop +ToolWindow -Caption -DPIScale +E0x20
-	Gui, nightFilter:Color, 0xFFFFEB
-	Gui, nightFilter:Show, x0 y0 w1920 h1080 NoActivate Hide, nightFilter
-	WinWait, nightFilter
-	WinSet, Transparent, 35, nightFilter
-}
+^Esc::Reload
 
-showAboutScreen:
-	showAboutScreen(appName " v" version, "Changes your monitor brightness automatically based on the currently active window.")
-return
+/* TODO:
+Add window / process -> FireFly follows mouse when choosing, enter chooses, escape cancels
+title or processName (default by process)
+brightnessValue 0-100 (default 50)
+nightLightStrength 0-100 (default 50)
+Block that if you have by title of the same process, you can not add a rule by process unless you remove the ones by title before, maybe prompt of those that match and offer removing?
 
-aboutGuiEscape:
-aboutGuiClose:
-	AboutGuiClose()
-return
 
-ExitSub:
-	ExitApp
+application list
 
-/*
-toggleable hotkey
-trayMenu
-title or processName
-brightnessValue 0-100
-progressive change yes/no
-add about
+Start with windows (default no)
+Scheduler (default no)
+progressive change yes/no (default yes)
+multilingual
+Clear config
+
+Update, autoreplace running executable
+Add CLI
 */

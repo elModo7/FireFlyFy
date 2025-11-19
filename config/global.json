@@ -1,4 +1,7 @@
 {
-    "language": "en-US",
-    "startWithWindows": false
+	"experimentalReadFilter": 0,
+	"language": "en-US",
+	"lookForUpdates": 1,
+	"progressive": 1,
+	"startWithWindows": 0
 }
