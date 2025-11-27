@@ -14,6 +14,7 @@ You can also enable read mode by toggling Windows Night Light.
 
 > [!WARNING]  
 > 💻Windows does not expose an API for Night Light CLI management by default, this is a bit of a hacky approach.
+>
 > 🚀 Standalone FireFlyFy CLI tool coming soon!
 
 
