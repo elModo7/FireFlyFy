@@ -80,8 +80,8 @@ setInitialBrigthness() {
 enableFireFlyFy() {
 	global
 	if (!fireFlyFyEnabled) {
-		Menu, Tray, Rename, % "Enable " appName, % "Disable " appName
-		Menu tray, Icon, % "Disable " appName, % A_Temp "\" appName "\disabled.ico"
+		Menu, Tray, Rename, % i18n.t("tray_enable_app", {app: appName}), % i18n.t("tray_disable_app", {app: appName})
+		Menu tray, Icon, % i18n.t("tray_disable_app", {app: appName}), % A_Temp "\" appName "\disabled.ico"
 	}
 	fireFlyFyEnabled := 1
 	OnMessage(registerWindowMessageId, "detectWindowChanged")
@@ -90,8 +90,8 @@ enableFireFlyFy() {
 disableFireFlyFy() {
 	global
 	if (fireFlyFyEnabled) {
-		Menu, Tray, Rename, % "Disable " appName, % "Enable " appName
-		Menu tray, Icon, % "Enable " appName, % A_Temp "\" appName "\enabled.ico"
+		Menu, Tray, Rename, % i18n.t("tray_disable_app", {app: appName}), % i18n.t("tray_enable_app", {app: appName})
+		Menu tray, Icon, % i18n.t("tray_enable_app", {app: appName}), % A_Temp "\" appName "\enabled.ico"
 	}
 	fireFlyFyEnabled := 0
 	OnMessage(registerWindowMessageId, "")

@@ -1,7 +1,5 @@
-﻿OnExit, ExitSub
-
-showAboutScreen:
-	showAboutScreen(appName " v" version, "Changes your monitor brightness and/or enables Windows's Night Light automatically based on the currently active window title or process.")
+﻿showAboutScreen:
+	showAboutScreen(appName " v" version, i18n.t("about_description"))
 return
 
 aboutGuiEscape:
@@ -11,6 +9,7 @@ return
 
 settingsGuiEscape:
 settingsGuiClose:
+	changeTempLanguage(false)
     Gui settings:Destroy
 return
 
@@ -19,6 +18,10 @@ appConfigurationGuiClose:
     Gui appConfiguration:Destroy
 return
 
+configuredAppsGuiEscape:
+configuredAppsGuiClose:
+    Gui configuredApps:Destroy
+return
 
 ExitSub:
 	gosub, gdipUnload

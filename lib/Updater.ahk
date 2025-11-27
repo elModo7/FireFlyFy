@@ -12,7 +12,7 @@
 		IfMsgBox Yes, {
 			downloadLatestVersion()
 		}
-	} else {
+	} else if (!silent) {
 		MsgBox 0x30, Warning!, % "Could not find any " appName " update server."
 	}
 }

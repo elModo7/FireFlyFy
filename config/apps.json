@@ -1,34 +1,5 @@
-{
-    "apps": [
-        {
-            "activeBy": "process",
-            "brightness": 30,
-            "changeBrightness": 1,
-            "name": "Notepad",
-            "process": "Notepad.exe",
-            "readMode": 0,
-			"nightLightStrength": 0,
-            "title": "New text document"
-        },
-        {
-            "activeBy": "process",
-            "brightness": 50,
-            "changeBrightness": 0,
-            "name": "IntelliJ",
-            "process": "idea64.exe",
-            "readMode": 1,
-			"nightLightStrength": 50,
-            "title": "Whatever"
-        },
-        {
-            "activeBy": "title",
-            "brightness": 50,
-            "changeBrightness": 1,
-            "name": "Google Chrome",
-            "process": "Chrome.exe",
-            "readMode": 1,
-			"nightLightStrength": 50,
-            "title": "Wikipedia, la enciclopedia libre - Google Chrome"
-        }
-    ]
+﻿{
+	"apps": {
+
+	}
 }

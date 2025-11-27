@@ -1,7 +1,14 @@
-{
-	"experimentalReadFilter": 0,
-	"language": "en-US",
-	"lookForUpdates": 1,
-	"progressive": 1,
-	"startWithWindows": 0
+﻿{
+	"experimentalReadFilter": "0",
+	"language": "en_US",
+	"lookForUpdates": "1",
+	"progressive": "1",
+	"scheduler": "0",
+	"schedulerEndHours": 0,
+	"schedulerEndMinutes": 0,
+	"schedulerFrom": "20251120175457",
+	"schedulerStartHours": 0,
+	"schedulerStartMinutes": 0,
+	"schedulerUntil": "20251120175457",
+	"startWithWindows": "0"
 }

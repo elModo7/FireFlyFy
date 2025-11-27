@@ -97,3 +97,5 @@ class Chalker {
         return prefix str Chalker._reset
     }
 }
+
+global chalk := new Chalker()

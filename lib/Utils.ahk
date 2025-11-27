@@ -1,6 +1,7 @@
 ﻿#Include <Updater>
 #Include <DownloadToFile>
 #Include <Chalk>
+#Include <ConsoleMessages>
 #Include <FireFlyFy>
 #Include <GUI_Funcs>
 #Include <Gdip_All>
@@ -23,24 +24,30 @@ installResources(overWrite := 0) {
 configureTray() {
 	global
 	Menu, Tray, NoStandard
+	Menu, Tray, DeleteAll
 	Menu, Tray, Icon, % A_Temp "\" appName "\FireFlyFy.ico"
 	Menu, Tray, Tip, % getCustomToolTipByDate()
-	Menu, Tray, Add, % "New " appName, addNewFireFlyFyWindow
-	Menu, Tray, Icon, % "New " appName, % A_Temp "\" appName "\FireFlyFy.ico"
-	Menu, Tray, Default, % "New " appName
-	Menu, Tray, Add, % "Disable " appName, toggleFireFlyFy
-	Menu, Tray, Icon, % "Disable " appName, % A_Temp "\" appName "\disabled.ico"
-	Menu, Tray, Add, % "Manage app list", showAboutScreen ; TODO GUI
-	Menu, Tray, Icon, % "Manage app list", % A_Temp "\" appName "\appicon.ico"
-	Menu, Tray, Add,
-	Menu, Tray, add, % "Settings", showSettingsGui
-	Menu, Tray, Icon, % "Settings", % A_Temp "\" appName "\cogs.ico"
-	Menu, Tray, Add, Look for Updates, lookForUpdates
-	Menu, Tray, Icon, Look for Updates, % A_Temp "\" appName "\download.ico"
-	Menu, Tray, add, % "About", showAboutScreen
-	Menu, Tray, Icon, % "About", % A_Temp "\" appName "\info.ico"
-	Menu, Tray, Add, Exit, ExitSub
-	Menu, Tray, Icon, Exit, % A_Temp "\" appName "\close.ico"
+	Menu, Tray, Add, % i18n.t("tray_new_app", {app: appName}), addNewFireFlyFyWindow
+	Menu, Tray, Icon, % i18n.t("tray_new_app", {app: appName}), % A_Temp "\" appName "\FireFlyFy.ico"
+	Menu, Tray, Default, % i18n.t("tray_new_app", {app: appName})
+	if (fireFlyFyEnabled) {
+		Menu, Tray, Add, % i18n.t("tray_disable_app", {app: appName}), toggleFireFlyFy
+		Menu, Tray, Icon, % i18n.t("tray_disable_app", {app: appName}), % A_Temp "\" appName "\disabled.ico"
+	} else {
+		Menu, Tray, Add, % i18n.t("tray_enable_app", {app: appName}), toggleFireFlyFy
+		Menu, Tray, Icon, % i18n.t("tray_enable_app", {app: appName}), % A_Temp "\" appName "\enabled.ico"
+	}
+	Menu, Tray, Add, % i18n.t("tray_manage_app_list"), appManagementConfigurationGui
+	Menu, Tray, Icon, % i18n.t("tray_manage_app_list"), % A_Temp "\" appName "\appicon.ico"
+	Menu, Tray, Add
+	Menu, Tray, Add, % i18n.t("tray_settings"), showSettingsGui
+	Menu, Tray, Icon, % i18n.t("tray_settings"), % A_Temp "\" appName "\cogs.ico"
+	Menu, Tray, Add, % i18n.t("tray_look_for_updates"), lookForUpdates
+	Menu, Tray, Icon, % i18n.t("tray_look_for_updates"), % A_Temp "\" appName "\download.ico"
+	Menu, Tray, Add, % i18n.t("tray_about"), showAboutScreen
+	Menu, Tray, Icon, % i18n.t("tray_about"), % A_Temp "\" appName "\info.ico"
+	Menu, Tray, Add, % i18n.t("tray_exit"), ExitSub
+	Menu, Tray, Icon, % i18n.t("tray_exit"), % A_Temp "\" appName "\close.ico"
 	contextcolor(2) ;0=Default ;1=AllowDark ;2=ForceDark ;3=ForceLight ;4=Max
 }
 
@@ -48,9 +55,11 @@ createOrReadConfig() {
 	global
 	if (!FileExist("config/global.json")) {
 		createGlobalConfig()
+		getCurrentLanguage()
 	} else {
 		FileRead, globalConfig, config/global.json
 		globalConfig := JSON.Load(globalConfig)
+		getCurrentLanguage()
 	}
 	if (!FileExist("config/apps.json")) {
 		createAppsConfig()
@@ -62,12 +71,17 @@ createOrReadConfig() {
 
 createGlobalConfig() {
 	global globalConfig, JSON
+	Gui, settings:Destroy
+	FileDelete, config/global.json
 	globalConfig := {}
-	globalConfig.language := "en-US"
+	globalConfig.language := "en_US"
 	globalConfig.startWithWindows := 0
 	globalConfig.progressive := 1
 	globalConfig.experimentalReadFilter := 0
 	globalConfig.lookForUpdates := 1
+	globalConfig.scheduler := 0
+	globalConfig.schedulerFrom := ""
+	globalConfig.schedulerUntil := ""
 	FileAppend, % JSON.Dump(globalConfig, 1), config/global.json
 }
 
@@ -138,7 +152,7 @@ URLToVar(URL)
 
 showError(msg, isFatal := false) {
 	if (isFatal) {
-		MsgBox 0x10, Error, % msg "`n`n The app will now close."
+		MsgBox 0x10, Error, % msg "`n`n " i18n.t("the_app_will_now_close")
 		ExitApp
 	} else {
 		MsgBox 0x10, Error, % msg
@@ -156,7 +170,7 @@ contextcolor(color:=2) ; change the number here from the list above if you want 
 
 trayEventsCapture(wParam, lParam) {
 	if (lParam == 0x201) {
-		; TODO new FireFlyFy window entry
+		addNewFireFlyFyWindow()
 	} else if (lParam == 0x205) {
 		Menu, Tray, Show
 	}
@@ -207,7 +221,7 @@ getCustomToolTipByDateAndSeason() {
 ; New Window FireFlyFy detection flow
 addNewFireFlyFyWindow() {
 	global
-	MsgBox,,Select Window, % "1) Activate a window you want " appName " to detect.`n2) Press Enter to configure it`n`nEsc: Cancel"
+	MsgBox, 0x40, % i18n.t("select_window"), % i18n.t("activate_a_window_you_want_firefly_to_detect", {app: appName})
 	HotKey, Enter, detectOpenProgram, On
 	HotKey, Esc, detectOpenProgramCancel, On
 	SetTimer, fireFlyFollowMouse, 10
@@ -231,23 +245,77 @@ detectOpenProgramCancel() {
 
 ; Translations
 getLanguages() {
-	global JSON
-	FileRead, languages, res\translations\list.json
-	return JSON.load(languages).languages
+	global JSON, languages
+	languages := []
+	Loop, Files, res\translations\*.json
+	{
+		newLang := {}
+		FileRead, langJson, % A_LoopFileFullPath
+		lang := JSON.Load(langJson)
+		newLang.langName := lang.language_name
+		newLang.langCode := lang.language_code
+		languages.push(newLang)
+	}
 }
 
 getLanguagesForDropDown() {
-	languages := getLanguages()
+	global languages
 	langOutput := ""
 	for langK, langV in languages
 	{
-		langOutput .= langV.language (langK < languages.length() ? "|" : "")
+		langOutput .= langV.langName (langK < languages.length() ? "|" : "")
 	}
 	return langOutput
 }
 
-loadTranslations(curLang) {
+getCurrentLanguage() {
 	global
-	; TODO
-	;~ FileRead, translations, res\translations\list.json
+	curLang := {}
+	for langK, lang in languages
+	{
+		if (lang.langCode == globalConfig.language) {
+			curLang := lang
+		}
+	}
+	if (curLang.langCode == "") {
+		curLang.langCode := "en_US"
+		curLang.langName := "English"
+	}
+	i18n.SetLocale(globalConfig.language)
+}
+
+getLanguageFromDropDown(langName) {
+	global
+	selectedLang := {}
+	for langK, lang in languages
+	{
+		if (lang.langName == langName) {
+			selectedLang := lang
+		}
+	}
+	if (selectedLang.langCode == "") {
+		selectedLang.langCode := "en_US"
+		selectedLang.langName := "English"
+	}
+	return selectedLang
+}
+
+getLanguageToChooseDropDown() {
+	global
+	selectedLanguageKey := 1
+	for langK, lang in languages
+	{
+		if (lang.langCode == globalConfig.language) {
+			selectedLanguageKey := langK
+		}
+	}
+	return selectedLanguageKey
+}
+
+loadTranslations() {
+	global
+	Loop, Files, res\translations\*.json
+	{
+		i18n.LoadFile(A_LoopFileFullPath)
+	}
 }

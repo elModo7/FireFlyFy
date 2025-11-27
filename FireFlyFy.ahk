@@ -1,8 +1,9 @@
 ﻿;@Ahk2Exe-SetName FireFlyFy
 ;@Ahk2Exe-SetDescription Changes monitor brightness based on active window.
 ;@Ahk2Exe-SetVersion 1.0.0
-;@Ahk2Exe-SetCopyright Copyright (c) 2025`, elModo7 - VictorDevLog
+;@Ahk2Exe-SetCopyright 2025 elModo7 - VictorDevLog
 ;@Ahk2Exe-SetOrigFilename FireFlyFy.exe
+;~ ;@Ahk2Exe-ConsoleApp ; Only for CLI Mode (maybe for a future revision as I will already be releasing a standalone CLI binary)
 #NoEnv
 #SingleInstance Force
 #Persistent
@@ -10,22 +11,30 @@ SetTitleMatchMode, 3
 DetectHiddenWindows, On
 SetBatchLines -1
 CoordMode, Mouse, Screen
-global version := "0.1.3"
+FileEncoding, UTF-8
+global version := "0.1.9"
 global appName := "FireFlyFy"
 
 ; Libs
 #Include <Screen>
 #Include <cJSON>
+#Include <i18n>
 #Include <Utils>
 #Include <AboutScreen>
 #Include <WindowsNightLight>
 
 ; Globals
 global initialBrightness, appPrev, processPrev, globalConfig, appsConfig, isVisible := 1, fireFlyFyEnabled := 1
+global curLang := {}, langC, languages
+
+; Languages
+getLanguages()
+i18n := new i18n("", "en_US", ["en_US"])
+loadTranslations()
 
 ; Init
+initCLIMessages()
 createOrReadConfig()
-loadTranslations(globalConfig.language)
 installResources()
 setInitialBrigthness()
 configureTray()
@@ -39,6 +48,8 @@ OnMessage(0x404, "trayEventsCapture")
 
 enableFireFlyFy()
 gosub, initMouseFollower
+OnExit, ExitSub
+globalConfig.lookForUpdates ? lookForUpdates(1) : ""
 return
 
 detectWindowChanged(wParam, lParam)
@@ -58,13 +69,13 @@ checkCurrentApp:
 		processPrev := processCur
 		for appK, appV in appsConfig.apps
 		{
-			if (appV.activeBy == "process") {
-				if (processCur == appV.process) {
+			if (appV.activeBy == "title") {
+				if (appCur == appV.title) {
 					applyFireFlyFy(appV)
 					return
 				}
 			} else {
-				if (appCur == appV.title) {
+				if (processCur == appV.process) {
 					applyFireFlyFy(appV)
 					return
 				}
@@ -79,21 +90,8 @@ return
 ^Esc::Reload
 
 /* TODO:
-Add window / process -> FireFly follows mouse when choosing, enter chooses, escape cancels
-title or processName (default by process)
-brightnessValue 0-100 (default 50)
-nightLightStrength 0-100 (default 50)
-Block that if you have by title of the same process, you can not add a rule by process unless you remove the ones by title before, maybe prompt of those that match and offer removing?
-
-
 application list
-
-Start with windows (default no)
 Scheduler (default no)
-progressive change yes/no (default yes)
-multilingual
-Clear config
-
 Update, autoreplace running executable
 Add CLI
 */
