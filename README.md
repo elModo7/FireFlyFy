@@ -1,4 +1,6 @@
-# 
+<p align="center">
+    <img align="center" width="200" height="200" alt="FireFlyFy-icon" src="https://raw.githubusercontent.com/elModo7/FireFlyFy/refs/heads/main/res/img/FireFlyFy_FireFly.png" />
+</p>
 
 # 🕯 FireFlyFy
 
