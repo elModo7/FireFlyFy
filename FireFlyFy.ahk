@@ -12,7 +12,7 @@ DetectHiddenWindows, On
 SetBatchLines -1
 CoordMode, Mouse, Screen
 FileEncoding, UTF-8
-global version := "0.1.9"
+global version := "1.0.0"
 global appName := "FireFlyFy"
 
 ; Libs
@@ -87,10 +87,7 @@ return
 
 #Include <LabelUtils>
 
-^Esc::Reload
-
 /* TODO:
-application list
 Scheduler (default no)
 Update, autoreplace running executable
 Add CLI
